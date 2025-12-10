@@ -221,8 +221,10 @@ install_packages() {
 install_go_tool() {
     local tool=$1
     local binary=$(basename "$tool" | sed 's/@latest//')
+    # Extract tool name from GitHub URL (github.com/author/tool/...)
+    local tool_name=$(echo "$tool" | sed -n 's|.*github\.com/[^/]*/\([^/]*\).*|\1|p')
 
-    log "Installing $binary..."
+    log "Installing $tool_name..."
     if go install "$tool" 2>/dev/null; then
         # Create symlink if binary exists
         if [[ -f "$HOME/go/bin/$binary" ]]; then
@@ -230,7 +232,7 @@ install_go_tool() {
                 warn "Failed to create symlink for $binary"
         fi
     else
-        warn "Failed to install $binary"
+        warn "Failed to install $tool_name"
     fi
 }
 
@@ -298,13 +300,9 @@ fi
 if should_install "bountytools" || should_install "extra"; then
     group "Installing paru (AUR helper)..."
     if ! command -v paru &> /dev/null; then
-        git clone https://aur.archlinux.org/paru.git /tmp/paru || \
+        git clone https://aur.archlinux.org/paru-bin.git /tmp/paru || \
             warn "Failed to clone paru repository"
         cd /tmp/paru
-
-        # Fix for Rust CPU optimization crashes
-        export RUSTFLAGS="-C target-feature=-avx, -avx2, -bmi1, -bmi2, -fma"
-
         makepkg -si --noconfirm || \
             warn "Failed to install paru"
         cd - > /dev/null
