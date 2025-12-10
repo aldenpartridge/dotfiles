@@ -58,14 +58,23 @@ elif [ "$OS" == "arch" ]; then
     log "Installing Rust..."
     rustup default stable
 
-    git clone https://aur.archlinux.org/yay.git
-    cd yay
-    makepkg -si --noconfirm
+    # Install paru (AUR helper)
+    log "Installing paru (AUR helper)..."
+    if ! command -v paru &> /dev/null; then
+        git clone https://aur.archlinux.org/paru.git /tmp/paru || \
+            warn "Failed to clone paru repository"
+        cd /tmp/paru
+        makepkg -si --noconfirm || \
+            warn "Failed to install paru"
+        cd - > /dev/null
+        rm -rf /tmp/paru
+    else
+        log "paru is already installed, skipping..."
+    fi
 
     # Enable services
     log "Enabling services..."
     sudo systemctl enable --now cronie.service
-www.dee
     # Install GUI applications in batch
     log "Installing GUI applications..."
     sudo pacman -S --needed --noconfirm \
@@ -95,13 +104,13 @@ www.dee
         warn "Some flatpak installations failed"
 
     # Install AUR packages
-    if command -v yay &> /dev/null; then
+    if command -v paru &> /dev/null; then
         log "Installing AUR packages..."
-        yay -S --needed --noconfirm \
+        paru -S --needed --noconfirm \
             mullvad-vpn mullvad-vpn-cli burpsuite aquatone-bin || \
             warn "Some AUR packages failed to install"
     else
-        warn "yay not found, skipping AUR packages"
+        warn "paru not found, skipping AUR packages"
     fi
 
     # Go tool installation function
