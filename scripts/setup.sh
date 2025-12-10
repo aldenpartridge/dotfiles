@@ -19,22 +19,7 @@ if [[ ! -f /etc/arch-release ]]; then
     error "This script is optimized for Arch Linux"
 fi
 
-# Check if argument provided
-if [ -z "$1" ]; then
-    echo "Usage: $0 <ubuntu|arch|windows>"
-    exit 1
-fi
-
-OS=$1
-
-if [ "$OS" == "ubuntu" ]; then
-    log "Updating package lists on Ubuntu..."
-    sudo apt-get update || error "Failed to update package lists"
-    sudo apt-get install sublist3r amass xsrfprobe -y || error "Failed to install Ubuntu packages"
-    log "Installation complete on Ubuntu."
-
-elif [ "$OS" == "arch" ]; then
-    log "Starting Arch Linux setup..."
+log "Starting Arch Linux setup..."
 
     # Update system
     log "Updating system packages..."
@@ -44,15 +29,58 @@ elif [ "$OS" == "arch" ]; then
     log "Creating directory structure..."
     mkdir -p ~/tools ~/scripts ~/wordlists/payloads ~/bounty ~/.gf ~/.config/puredns ~/Notes ~/Dev ~/Work ~/Misc ~/sys-scripts ~/nuclei-templates ~/oty-templates ~/.config/VSCodium/User ~/.var/app/org.torproject.torbrowser-launcher/data/torbrowser/tbb/x86_64/tor-browser/Browser/TorBrowser/Data/Browser/profile.default/
 
-    # Install core development tools in batch
+    # Install core development tools with conflict handling
     log "Installing core development packages..."
-    sudo pacman -S --needed --noconfirm \
-        python3 python-pip rustup python-pipx python-setuptools cmake docker docker-compose \
-        flatpak wget ripgrep jq nmap btop fzf llvm openbsd-netcat base-devel oryx tickrs \
-        tor yubikey-personalization libfido2 yubikey-manager \
-        binwalk findomain radare2 hashcat ghidra git go stow \
-        cronie || \
-        error "Failed to install core packages"
+    packages=(
+        "python3"
+        "python-pip"
+        "rustup"
+        "python-pipx"
+        "python-setuptools"
+        "cmake"
+        "docker"
+        "docker-compose"
+        "flatpak"
+        "wget"
+        "ripgrep"
+        "jq"
+        "nmap"
+        "btop"
+        "fzf"
+        "llvm"
+        "openbsd-netcat"
+        "base-devel"
+        "oryx"
+        "tickrs"
+        "tor"
+        "yubikey-personalization"
+        "libfido2"
+        "yubikey-manager"
+        "binwalk"
+        "findomain"
+        "radare2"
+        "hashcat"
+        "ghidra"
+        "git"
+        "go"
+        "stow"
+        "cronie"
+    )
+
+    failed_packages=()
+    for package in "${packages[@]}"; do
+        if sudo pacman -S --needed --noconfirm "$package" 2>/dev/null; then
+            log "✓ $package installed/updated"
+        else
+            warn "✗ Failed to install $package (may already be installed or conflict)"
+            failed_packages+=("$package")
+        fi
+    done
+
+    if [ ${#failed_packages[@]} -gt 0 ]; then
+        warn "Some packages failed to install: ${failed_packages[*]}"
+        warn "This is normal if they're already installed from other sources"
+    fi
 
     # Download Rust
     log "Installing Rust..."
@@ -300,15 +328,5 @@ fi
 
     log "Arch Linux setup completed successfully!"
     log "Run 'source ~/.bashrc' to use all installed tools."
-
-elif [ "$OS" == "windows" ]; then
-    log "Updating and installing packages on Windows..."
-    choco upgrade all -y || warn "Chocolatey upgrade failed"
-    choco install sublist3r amass xsrfprobe -y || warn "Some packages failed to install"
-    log "Installation complete on Windows."
-
-else
-    error "Unsupported OS: $OS"
-fi
 
 log "Setup script finished!"
