@@ -301,6 +301,10 @@ if should_install "bountytools" || should_install "extra"; then
         git clone https://aur.archlinux.org/paru.git /tmp/paru || \
             warn "Failed to clone paru repository"
         cd /tmp/paru
+
+        # Fix for Rust CPU optimization crashes
+        export RUSTFLAGS="-C target-feature=-avx, -avx2, -bmi1, -bmi2, -fma"
+
         makepkg -si --noconfirm || \
             warn "Failed to install paru"
         cd - > /dev/null
